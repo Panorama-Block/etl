@@ -22,8 +22,21 @@ services:
       - clickhouse_data:/var/lib/clickhouse
     restart: always
 
+  pipeline:
+    build: ../pipeline
+    ports:
+      - "5000:5000"
+    environment:
+      MINIO_URL: ${MINIO_URL}
+      MINIO_USER: ${MINIO_USER}
+      MINIO_PASSWORD: ${MINIO_PASSWORD}
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
+      CLICKHOUSE_PORT: ${CLICKHOUSE_PORT}
+    restart: always
+
 volumes:
   minio_data:
     driver: local
   clickhouse_data:
     driver: local
+  pipeline:

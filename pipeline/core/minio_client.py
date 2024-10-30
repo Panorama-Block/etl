@@ -18,25 +18,24 @@ client = Minio(
 
 def create_bucket(bucket_name): 
   try:
-        # Criar bucket se não existir
+        # create bucket if not exist
         if not client.bucket_exists(bucket_name):
             client.make_bucket(bucket_name)
-            print(f"Bucket '{bucket_name}' criado com sucesso.")
+            print(f"Bucket '{bucket_name}' created with success")
         else:
-            print(f"Bucket '{bucket_name}' já existe.")
+            print(f"Bucket '{bucket_name}' exists.")
   except S3Error as e:
-        print(f"Erro ao interagir com o MinIO: {e}")
+        print(f"Error to interact with MinIO: {e}")
 
 def upload_file(bucket_name, filepath, filename):
   try:
-    with open(filepath, 'rb') as file:
-      res = client.fput_object(bucket_name, file, filename)  
+      file_name = os.path.basename(filepath)
+      res = client.fput_object(bucket_name, file_name, filepath)
       print("Success to upload")
-  
-    return res
+      return res
   
   except S3Error as e:
-        print(f"Erro ao interagir com o MinIO: {e}")
+        print(f"Erro to interact with MinIO: {e}")
 
 def download_file(bucket_name, filename, local_path):
   try: 
