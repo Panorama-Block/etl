@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "core"
+version = "0.1.0"
+description = ""
+authors = ["felipesaadi <felipesaadisiegert@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+Flask = "^3.0.3"
+requests = "^2.32.3"
+pandas = "^2.2.3"
+pyarrow = "^17.0.0"
+minio = "^7.2.9"
+clickhouse-connect = "^0.8.5"
+python-dotenv = "^1.0.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

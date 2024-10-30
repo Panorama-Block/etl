@@ -1,0 +1,9 @@
+.env
+test.http
+*.pyc 
+*.csv
+*.parquet
+**/*.csv
+**/*.parquet
+temp
+.aws/
