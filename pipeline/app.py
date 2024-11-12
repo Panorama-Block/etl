@@ -16,9 +16,9 @@ app = Flask(__name__)
 # Create bucket if not exist
 minio_client.create_bucket('data')
 
-# # Create table if not exist
-# create_table_sql = os.path.join("sql/create_table.sql")
-# clickhouse_client.execute_sql_script(create_table_sql)
+# Create table if not exist
+create_table_sql = os.path.join("sql/create_table_temp1.sql")
+clickhouse_client.execute_sql_script(create_table_sql)
 
 # # Create table_gold if not exist
 # create_table_gold_sql = os.path.join("sql/create_table_gold.sql")
