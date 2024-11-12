@@ -24,6 +24,11 @@ ORDER BY
   timestamp;
 
 CREATE TABLE
+  IF NOT EXISTS tb_icp_max_txo_sec (timestamp DateTime, txo_sec UInt64) ENGINE = MergeTree ()
+ORDER BY
+  timestamp;
+
+CREATE TABLE
   IF NOT EXISTS tb_icp_canister (
     canister_id String,
     controllers String,
