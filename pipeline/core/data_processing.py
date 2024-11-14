@@ -17,6 +17,13 @@ def convert_to_parquet(filename, temp_folder):
     df = pd.read_csv(csv_path)
     df.to_parquet(parquet_path, index=False)
     print(f"Convertido: {csv_path} -> {parquet_path}")
+  
+  elif filename.endswith(".json"):
+    json_path = os.path.join(temp_folder, filename)
+    parquet_path = os.path.join(temp_folder, filename.replace(".json", ".parquet"))
+    df = pd.read_json(json_path)
+    df.to_parquet(parquet_path, index=False)
+    print(f"Convertido: {json_path} -> {parquet_path}")
     
 def remove_file_pattern(filename):
   pattern = r'(_\d{2}_\d{2}_\d{4}_\d{2}_\d{2}_\d{2})\.parquet$'

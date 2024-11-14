@@ -81,8 +81,47 @@ def ingestion_csv():
 def ingestion_json():
   data = request.get_json()
   
-  if not data or len(data) < 1:
-    return jsonify({"error": "Invalid data"}), 400
+  if 'file' not in request.files:
+    return jsonify({"error": "No file found"}), 400
+  
+  for file in request.files.getlist('file'):
+    if file and file.filename.endswith('.json'):
+      filename = file.filename.replace(".json", datetime.now().strftime('_%m_%d_%Y_%H_%M_%S.json')) 
+      print(filename)
+      temp_folder = 'temp'
+      json_path = os.path.join(temp_folder, filename)
+      
+      try:
+        os.makedirs(temp_folder, exist_ok=True)
+        
+        file.save(json_path)
+
+        data_processing.convert_to_parquet(filename, temp_folder)
+        
+        parquet_filename = filename.replace(".json", ".parquet")
+        print(json_path)
+        parquet_path = os.path.join(temp_folder, parquet_filename)
+        print(parquet_path)
+        res = minio_client.upload_file('data', parquet_path, parquet_filename)
+        # print(res)
+        
+        threads.transform_and_save(parquet_filename)
+      except Exception as e:
+        print(e)
+        
+      try:
+          os.remove(json_path)
+          parquet_path = json_path.replace(".json", ".parquet")
+          os.remove(parquet_path)
+          print(f"File temp deleted with success")
+      except Exception as e:
+          print(f"Error to delete file '{json_path}': {e}")
+          
+      return jsonify({"message": "File converted and uploaded with success!"}), 200
+    
+    else:
+      return jsonify({"error": "Format not allowed"}), 400
+
   
   return data
 
