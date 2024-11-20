@@ -34,9 +34,41 @@ services:
       CLICKHOUSE_PORT: ${CLICKHOUSE_PORT}
     restart: always
 
+  spark-master:
+    build: ./spark
+    ports:
+      - "9090:8080"
+      - "7077:7077"
+    volumes:
+       - ./apps:/opt/spark-apps
+       - ./data:/opt/spark-data
+    environment:
+      - SPARK_LOCAL_IP=spark-master
+      - SPARK_WORKLOAD=master
+
+  spark-worker:
+    image: infra-spark-master
+    ports:
+      - "9091:8080"
+      - "7000:7000"
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_DRIVER_MEMORY=1G
+      - SPARK_EXECUTOR_MEMORY=1G
+      - SPARK_WORKLOAD=worker
+      - SPARK_LOCAL_IP=spark-worker
+    volumes:
+       - ./apps:/opt/spark-apps
+       - ./data:/opt/spark-data
+
 volumes:
   minio_data:
     driver: local
   clickhouse_data:
     driver: local
   pipeline:
+  spark-logs:
