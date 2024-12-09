@@ -18,6 +18,8 @@ FROM builder as apache-spark
 
 WORKDIR /opt/spark
 
+RUN apt-get update && apt-get install -y curl
+
 ENV SPARK_MASTER_PORT=7077 \
 SPARK_MASTER_WEBUI_PORT=8080 \
 SPARK_LOG_DIR=/opt/spark/logs \

@@ -2,9 +2,8 @@ from flask import Flask, request, jsonify
 import json
 import pandas as pd
 import os
-
 from datetime import datetime
-# import schedule
+from pyspark.sql import SparkSession
 
 import core.minio_client as minio_client
 import core.clickhouse_client as clickhouse_client
@@ -12,6 +11,12 @@ import core.data_processing as data_processing
 import core.threads as threads
 
 app = Flask(__name__)
+
+# Initialize Spark
+spark = SparkSession.builder \
+    .appName("Panorama ETL") \
+    .master("spark://spark-master:7077") \
+    .getOrCreate()
 
 # Create bucket if not exist
 minio_client.create_bucket('data')
@@ -51,7 +56,7 @@ def ingestion_csv():
         
         file.save(csv_path)
 
-        data_processing.convert_to_parquet(filename, temp_folder)
+        data_processing.convert_to_parquet(spark, filename, temp_folder)
         
         parquet_filename = filename.replace(".csv", ".parquet")
         print(csv_path)
@@ -96,7 +101,7 @@ def ingestion_json():
         
         file.save(json_path)
 
-        data_processing.convert_to_parquet(filename, temp_folder)
+        data_processing.convert_to_parquet(spark, filename, temp_folder)
         
         parquet_filename = filename.replace(".json", ".parquet")
         print(json_path)
