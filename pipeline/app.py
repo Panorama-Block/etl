@@ -2,9 +2,8 @@ from flask import Flask, request, jsonify
 import json
 import pandas as pd
 import os
-
 from datetime import datetime
-# import schedule
+from pyspark.sql import SparkSession
 
 import core.minio_client as minio_client
 import core.clickhouse_client as clickhouse_client
@@ -13,12 +12,18 @@ import core.threads as threads
 
 app = Flask(__name__)
 
+# Initialize Spark
+spark = SparkSession.builder \
+    .appName("Panorama ETL") \
+    .master("spark://spark-master:7077") \
+    .getOrCreate()
+
 # Create bucket if not exist
 minio_client.create_bucket('data')
 
-# # Create table if not exist
-# create_table_sql = os.path.join("sql/create_table.sql")
-# clickhouse_client.execute_sql_script(create_table_sql)
+# Create table if not exist
+create_table_sql = os.path.join("sql/create_table_temp1.sql")
+clickhouse_client.execute_sql_script(create_table_sql)
 
 # # Create table_gold if not exist
 # create_table_gold_sql = os.path.join("sql/create_table_gold.sql")
@@ -51,7 +56,7 @@ def ingestion_csv():
         
         file.save(csv_path)
 
-        data_processing.convert_to_parquet(filename, temp_folder)
+        data_processing.convert_to_parquet(spark, filename, temp_folder)
         
         parquet_filename = filename.replace(".csv", ".parquet")
         print(csv_path)
@@ -81,8 +86,47 @@ def ingestion_csv():
 def ingestion_json():
   data = request.get_json()
   
-  if not data or len(data) < 1:
-    return jsonify({"error": "Invalid data"}), 400
+  if 'file' not in request.files:
+    return jsonify({"error": "No file found"}), 400
+  
+  for file in request.files.getlist('file'):
+    if file and file.filename.endswith('.json'):
+      filename = file.filename.replace(".json", datetime.now().strftime('_%m_%d_%Y_%H_%M_%S.json')) 
+      print(filename)
+      temp_folder = 'temp'
+      json_path = os.path.join(temp_folder, filename)
+      
+      try:
+        os.makedirs(temp_folder, exist_ok=True)
+        
+        file.save(json_path)
+
+        data_processing.convert_to_parquet(spark, filename, temp_folder)
+        
+        parquet_filename = filename.replace(".json", ".parquet")
+        print(json_path)
+        parquet_path = os.path.join(temp_folder, parquet_filename)
+        print(parquet_path)
+        res = minio_client.upload_file('data', parquet_path, parquet_filename)
+        # print(res)
+        
+        threads.transform_and_save(parquet_filename)
+      except Exception as e:
+        print(e)
+        
+      try:
+          os.remove(json_path)
+          parquet_path = json_path.replace(".json", ".parquet")
+          os.remove(parquet_path)
+          print(f"File temp deleted with success")
+      except Exception as e:
+          print(f"Error to delete file '{json_path}': {e}")
+          
+      return jsonify({"message": "File converted and uploaded with success!"}), 200
+    
+    else:
+      return jsonify({"error": "Format not allowed"}), 400
+
   
   return data
 
