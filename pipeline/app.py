@@ -4,19 +4,28 @@ import pandas as pd
 import os
 from datetime import datetime
 from pyspark.sql import SparkSession
+import signal
 
 import core.minio_client as minio_client
 import core.clickhouse_client as clickhouse_client
 import core.data_processing as data_processing
 import core.threads as threads
+from core.kafka_consumer import start_kafka, stop_kafka, messages_store
+from core.kafka_admin import create_topic
 
 app = Flask(__name__)
 
 # Initialize Spark
-spark = SparkSession.builder \
-    .appName("Panorama ETL") \
-    .master("spark://spark-master:7077") \
-    .getOrCreate()
+# spark = SparkSession.builder \
+#     .appName("Panorama ETL") \
+#     .master("spark://spark-master:7077") \
+#     .getOrCreate()
+
+# Create Kafka topic
+create_topic()
+
+# Inicia o Kafka quando o Flask sobe
+start_kafka()
 
 # Create bucket if not exist
 minio_client.create_bucket('data')
@@ -174,6 +183,25 @@ def save_data():
       print(f"Error to delete file '{parquet_path}': {e}")      
   
   return {"ok": "Success to save the data"}
+
+@app.route("/messages", methods=["GET"])
+def get_messages():
+    """Endpoint Flask para obter as últimas mensagens consumidas"""
+    return jsonify(messages_store[-10:])  # Retorna as 10 últimas mensagens
+
+def shutdown_server():
+    """Função para encerrar o Flask corretamente"""
+    stop_kafka()
+    print("🔴 API Flask encerrada.")
+
+# Captura sinais de encerramento (CTRL+C ou Docker stop)
+def signal_handler(sig, frame):
+    print("\n🔴 Recebido sinal de encerramento...")
+    shutdown_server()
+    exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)  # CTRL+C
+signal.signal(signal.SIGTERM, signal_handler)  # Docker stop
 
 if __name__ == '__main__':
   app.run(host="0.0.0.0", port=5000)
