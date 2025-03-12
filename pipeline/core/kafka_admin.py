@@ -1,8 +1,12 @@
 from confluent_kafka.admin import AdminClient, NewTopic
+from .config import KAFKA_BROKER
+
+print(f"KAFKA_BROKER: {KAFKA_BROKER}")
 
 # Criar o cliente de administração do Kafka
 admin_client = AdminClient({
-    "bootstrap.servers": "kafka:9092"
+    "bootstrap.servers": KAFKA_BROKER
+
 })
 
 def create_topic():

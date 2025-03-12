@@ -1,7 +1,15 @@
+version: '3'
+
+networks:
+  app_network:  # Define a custom network
+    driver: bridge
+
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
     container_name: zookeeper
+    networks:
+      - app_network
     ports:
       - "2181:2181"
     environment:
@@ -11,26 +19,32 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: kafka
+    networks:
+      - app_network
     ports:
       - "9092:9092"
       - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9092,OUTSIDE://192.168.15.8:29092  
+      KAFKA_LISTENERS: INSIDE://0.0.0.0:9092,OUTSIDE://0.0.0.0:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_MESSAGE_MAX_BYTES: 200000000
+      KAFKA_REPLICA_FETCH_MAX_BYTES: 200000000
     depends_on:
       - zookeeper
     restart: always
-      
+
   minio:
     image: minio/minio:RELEASE.2024-10-13T13-34-11Z
     container_name: minio
+    networks:
+      - app_network
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -45,6 +59,8 @@ services:
   clickhouse:
     image: clickhouse/clickhouse-server:24.5.5.41-alpine
     container_name: clickhouse
+    networks:
+      - app_network
     ports:
       - "8123:8123"
     volumes:
@@ -53,14 +69,20 @@ services:
 
   pipeline:
     build: ../pipeline
+    container_name: pipeline
+    networks:
+      - app_network
     ports:
       - "5000:5000"
     environment:
       MINIO_URL: ${MINIO_URL}
       MINIO_USER: ${MINIO_USER}
       MINIO_PASSWORD: ${MINIO_PASSWORD}
-      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
-      CLICKHOUSE_PORT: ${CLICKHOUSE_PORT}
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+      KAFKA_BROKER: kafka:9092
+      KAFKA_TOPIC: ${KAFKA_TOPIC}
+      KAFKA_GROUP_ID: ${KAFKA_GROUP_ID}
     restart: always
     depends_on:
       - kafka
@@ -69,12 +91,15 @@ services:
 
   spark-master:
     build: ./spark
+    container_name: spark-master
+    networks:
+      - app_network
     ports:
       - "9090:8080"
       - "7077:7077"
     volumes:
-       - ./apps:/opt/spark-apps
-       - ./data:/opt/spark-data
+      - ./apps:/opt/spark-apps
+      - ./data:/opt/spark-data
     environment:
       - SPARK_LOCAL_IP=spark-master
       - SPARK_WORKLOAD=master
@@ -88,6 +113,9 @@ services:
 
   spark-worker:
     build: ./spark
+    container_name: spark-worker
+    networks:
+      - app_network
     ports:
       - "9091:8080"
       - "7000:7000"
@@ -102,8 +130,8 @@ services:
       - SPARK_WORKLOAD=worker
       - SPARK_LOCAL_IP=spark-worker
     volumes:
-       - ./apps:/opt/spark-apps
-       - ./data:/opt/spark-data
+      - ./apps:/opt/spark-apps
+      - ./data:/opt/spark-data
     restart: always
 
 volumes:
@@ -112,3 +140,4 @@ volumes:
   clickhouse_data:
     driver: local
   pipeline:
+    driver: local
