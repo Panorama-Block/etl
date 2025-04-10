@@ -27,7 +27,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9092,OUTSIDE://192.168.15.8:29092  
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9092,OUTSIDE://10.150.3.232:29092  
       KAFKA_LISTENERS: INSIDE://0.0.0.0:9092,OUTSIDE://0.0.0.0:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
@@ -83,56 +83,13 @@ services:
       KAFKA_BROKER: kafka:9092
       KAFKA_TOPIC: ${KAFKA_TOPIC}
       KAFKA_GROUP_ID: ${KAFKA_GROUP_ID}
-    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # Mount the Docker socket
+      - ./spark/spark_job.py:/opt/spark-apps
     depends_on:
       - kafka
       - minio
       - clickhouse
-
-  spark-master:
-    build: ./spark
-    container_name: spark-master
-    networks:
-      - app_network
-    ports:
-      - "9090:8080"
-      - "7077:7077"
-    volumes:
-      - ./apps:/opt/spark-apps
-      - ./data:/opt/spark-data
-    environment:
-      - SPARK_LOCAL_IP=spark-master
-      - SPARK_WORKLOAD=master
-    healthcheck:
-      test: curl -f "http://spark-master:8080" || exit 1
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: always
-
-  spark-worker:
-    build: ./spark
-    container_name: spark-worker
-    networks:
-      - app_network
-    ports:
-      - "9091:8080"
-      - "7000:7000"
-    depends_on:
-      - spark-master
-    environment:
-      - SPARK_MASTER=spark://spark-master:7077
-      - SPARK_WORKER_CORES=1
-      - SPARK_WORKER_MEMORY=1G
-      - SPARK_DRIVER_MEMORY=1G
-      - SPARK_EXECUTOR_MEMORY=1G
-      - SPARK_WORKLOAD=worker
-      - SPARK_LOCAL_IP=spark-worker
-    volumes:
-      - ./apps:/opt/spark-apps
-      - ./data:/opt/spark-data
-    restart: always
 
 volumes:
   minio_data:

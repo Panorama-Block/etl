@@ -16,6 +16,7 @@ python-dotenv = "^1.0.1"
 pyspark = "3.4.0"
 kafka-python = "^2.0.2"
 confluent_kafka = "^2.0.2"
+clickhouse-driver = "*"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
