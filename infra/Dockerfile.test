@@ -1,0 +1,21 @@
+FROM bitnami/spark:latest
+
+# Instalação do Python e Poetry
+USER root
+RUN apt-get update && \
+    apt-get install -y python3-pip curl && \
+    pip3 install poetry pytest pytest-cov pytest-mock && \
+    ln -s /usr/bin/python3 /usr/bin/python
+
+# Diretório de trabalho
+WORKDIR /app
+
+# Copia código-fonte primeiro
+COPY . .
+
+# Instala dependências Python incluindo dev dependencies
+RUN poetry config virtualenvs.create false && \
+    poetry install --no-interaction --no-ansi
+
+# Comando para rodar os testes
+CMD ["pytest", "-v", "--cov=pipeline"] 

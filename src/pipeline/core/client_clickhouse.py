@@ -9,7 +9,7 @@ import subprocess
 
 # Assumes you have a custom module for listing files from MinIO
 from .minio_client import list_parquet_files
-from .test_spark import run_spark_job
+from .test_spark import run_spark_chains, run_spark_blocks
 
 
 logging.basicConfig(level=logging.INFO)
@@ -52,7 +52,7 @@ def get_chains_table():
     result = clickhouse_client.execute("SELECT * FROM chains")
     return result
 
-def delete_chains_table():
+def delete_all_tables():
     """
     Delete the chains table from ClickHouse.
     """
@@ -67,33 +67,60 @@ def delete_chains_table():
     logging.info("Deleting chains table...")
     clickhouse_client.execute("DROP TABLE IF EXISTS chains")
     clickhouse_client.execute("DROP TABLE IF EXISTS loaded_files")
+    clickhouse_client.execute("DROP TABLE IF EXISTS blocks")
     logging.info("Chains table deleted.")
 
 def process_new_file(file_name: str, bucket: str, minio_url: str, minio_user: str, minio_password: str):
+    """
+    Process a new file from MinIO and load it into ClickHouse.
+
+    Think:
+    Use different spark jobs for each bucket or use a spark job that can handle both?
+    """
+    logging.info(f"Processing file: {file_name} from client_clickhouse.py")
     clickhouse_url = "jdbc:clickhouse://clickhouse:8123/default"
     clickhouse_table = "chains"
     clickhouse_user = "default"
     clickhouse_password = ""
-    spark_version, columns = run_spark_job(
-        file_name,
-        bucket,
-        minio_url,
-        minio_user,
-        minio_password, 
-        clickhouse_url,
-        clickhouse_table,
-        clickhouse_user,
-        clickhouse_password
-    )
-    if not columns:
-        logging.error(f"Error processing file {file_name}: No columns found.")
-        return spark_version, []
-    return spark_version, columns
+
+    if bucket == "chains":
+        spark_version, columns = run_spark_chains(
+            file_name,
+            bucket,
+            minio_url,
+            minio_user,
+            minio_password, 
+            clickhouse_url,
+            clickhouse_table,
+            clickhouse_user,
+            clickhouse_password
+        )
+        if not columns:
+            logging.error(f"Error processing file {file_name}: No columns found.")
+            return spark_version, []
+        return spark_version, columns
+    elif bucket == "blocks":
+        spark_version, columns = run_spark_blocks(
+            file_name,
+            bucket,
+            minio_url,
+            minio_user,
+            minio_password, 
+            clickhouse_url,
+            clickhouse_table,
+            clickhouse_user,
+            clickhouse_password
+        )
+        if not columns:
+            logging.error(f"Error processing file {file_name}: No columns found.")
+            return spark_version, []
+        return spark_version, columns
+    else:
+        logging.error(f"Unknown bucket: {bucket}")
+        return None, []
 
 
 def spark_clickhouse_run():
-    # Environment/configuration variables.
-    bucket = "data"
     prefix = ""  # Adjust if needed.
     minio_url = "http://minio:9000"  # MinIO endpoint.
     minio_user = os.environ.get("MINIO_USER", "minio_user")
@@ -112,20 +139,34 @@ def spark_clickhouse_run():
     
     while True:
         logging.info("Listing Parquet files from MinIO...")
-        all_files = list_parquet_files(bucket, prefix)
-        logging.info(f"Found {len(all_files)} .parquet files in MinIO.")
+
+        chains_files = list_parquet_files("chains", prefix)
+        blocks_files = list_parquet_files("blocks", prefix)
+
+        logging.info(f"Found {len(chains_files)} chains files.")
+        logging.info(f"Found {len(blocks_files)} blocks files.")
 
         loaded_files = get_loaded_files(clickhouse_client)
         logging.info(f"Already loaded files: {loaded_files}")
 
         # Determine the new files that haven't been processed.
-        new_files = [f for f in all_files if f not in loaded_files]
-        logging.info(f"New files to process: {new_files}")
+        chain_new_files = [f for f in chains_files if f not in loaded_files]
+        block_new_files = [f for f in blocks_files if f not in loaded_files]
+
+        logging.info(f"New files to process: {chain_new_files + block_new_files}")
 
         # Process each new file.
-        for file_name in new_files:
+        for file_name in chain_new_files:
             logging.info(f"Processing new file: {file_name}")
-            spark_version, columns = process_new_file(file_name, bucket, minio_url, minio_user, minio_password)
+            spark_version, columns = process_new_file(file_name, "chains", minio_url, minio_user, minio_password)
+            logging.info(f"Spark version: {spark_version}")
+            logging.info(f"Columns: {columns}")
+            # Mark the file as loaded.
+            clickhouse_client.execute("INSERT INTO loaded_files (file_name) VALUES", [(file_name,)])
+        
+        for file_name in block_new_files:
+            logging.info(f"Processing new file: {file_name}")
+            spark_version, columns = process_new_file(file_name, "blocks", minio_url, minio_user, minio_password)
             logging.info(f"Spark version: {spark_version}")
             logging.info(f"Columns: {columns}")
             # Mark the file as loaded.

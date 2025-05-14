@@ -1,4 +1,3 @@
-from kafka import KafkaConsumer
 import threading
 import time
 import json
@@ -7,8 +6,8 @@ import logging
 import io
 import pandas as pd  # Added for DataFrame conversion
 
-from core.minio_client import upload_data
-from core.config import KAFKA_TOPIC, KAFKA_GROUP_ID, KAFKA_BROKER
+from src.pipeline.core.minio_client import upload_data
+from src.pipeline.core.config import KAFKA_TOPIC, KAFKA_GROUP_ID, KAFKA_BROKER
 
 # Setup logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -21,6 +20,7 @@ messages_store = []
 stop_event = threading.Event()
 
 def consume_kafka():
+    from kafka import KafkaConsumer
     """Função que roda em uma thread separada para consumir Kafka"""
     global messages_store
 

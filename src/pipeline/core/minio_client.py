@@ -33,6 +33,17 @@ def create_bucket(bucket_name):
     except S3Error as e:
         print(f"Error interacting with MinIO: {e}")
 
+def delete_all_buckets():
+    """
+    Delete all buckets in Minio.
+    """
+    try:
+        for bucket in client.list_buckets():
+            client.remove_bucket(bucket.name)
+            print(f"Bucket '{bucket.name}' deleted successfully.")
+    except S3Error as e:
+        print(f"Error deleting buckets in MinIO: {e}")
+
 def upload_data(bucket_name, file_name, data):
     """
     Upload data to Minio as an object in the specified bucket.

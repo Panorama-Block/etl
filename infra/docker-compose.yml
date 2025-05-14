@@ -27,10 +27,14 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9092,OUTSIDE://10.150.3.232:29092  
+
+      # Listeners (interno e externo)
       KAFKA_LISTENERS: INSIDE://0.0.0.0:9092,OUTSIDE://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9092,OUTSIDE://localhost:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+
+      # Configs adicionais
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
@@ -68,7 +72,9 @@ services:
     restart: always
 
   pipeline:
-    build: ../pipeline
+    build:
+      context: ../
+      dockerfile: infra/Dockerfile
     container_name: pipeline
     networks:
       - app_network
@@ -90,6 +96,18 @@ services:
       - kafka
       - minio
       - clickhouse
+
+  pipeline-test:
+    build:
+      context: ../
+      dockerfile: infra/Dockerfile.test
+    container_name: pipeline-test
+    networks:
+      - app_network
+    environment:
+      KAFKA_BROKER: kafka:9092
+    depends_on:
+      - kafka
 
 volumes:
   minio_data:

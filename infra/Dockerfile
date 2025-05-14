@@ -26,17 +26,18 @@ RUN curl -L --retry 3 --retry-delay 5 -o /opt/bitnami/spark/jars/clickhouse-jdbc
 ENV SPARK_EXTRA_CLASSPATH=/opt/bitnami/spark/jars/*
 
 # Diretório de trabalho
-WORKDIR /pipeline
+WORKDIR /app
 
 # Instala dependências Python
 COPY pyproject.toml poetry.lock* ./
-RUN poetry install --no-root
+RUN poetry config virtualenvs.create false && \
+    poetry install --no-interaction --no-ansi
 
 # Copia código-fonte
-COPY . .
+COPY src/pipeline ./pipeline
 
 # Exposição da porta (caso use Flask, etc)
 EXPOSE 5000
 
 # Comando principal
-CMD ["poetry", "run", "python", "app.py"]
+CMD ["poetry", "run", "python", "pipeline/app.py"]
