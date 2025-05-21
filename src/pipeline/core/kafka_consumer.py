@@ -6,8 +6,8 @@ import logging
 import io
 import pandas as pd  # Added for DataFrame conversion
 
-from src.pipeline.core.minio_client import upload_data
-from src.pipeline.core.config import KAFKA_TOPIC, KAFKA_GROUP_ID, KAFKA_BROKER
+from .minio_client import upload_data
+from .config import KAFKA_TOPIC, KAFKA_GROUP_ID, KAFKA_BROKER
 
 # Setup logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")

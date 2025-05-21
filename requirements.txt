@@ -6,8 +6,9 @@ pyarrow==17.0.0
 minio==7.2.9
 clickhouse-connect==0.8.5
 python-dotenv==1.0.1
-kafka-python==2.0.2
+kafka-python==2.0.3
 confluent-kafka==2.0.2
+six==1.16.0
 
 # dev dependencies
 pytest==7.4.0
