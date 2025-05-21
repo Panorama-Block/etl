@@ -42,6 +42,12 @@ services:
       KAFKA_REPLICA_FETCH_MAX_BYTES: 200000000
     depends_on:
       - zookeeper
+    healthcheck:
+      test: ["CMD-SHELL", "/usr/bin/kafka-topics --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
     restart: always
 
   minio:
@@ -93,21 +99,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock # Mount the Docker socket
       - ./spark/spark_job.py:/opt/spark-apps
     depends_on:
-      - kafka
-      - minio
-      - clickhouse
-
-  pipeline-test:
-    build:
-      context: ../
-      dockerfile: infra/Dockerfile.test
-    container_name: pipeline-test
-    networks:
-      - app_network
-    environment:
-      KAFKA_BROKER: kafka:9092
-    depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      clickhouse:
+        condition: service_started
 
 volumes:
   minio_data:

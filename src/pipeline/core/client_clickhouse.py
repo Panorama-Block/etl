@@ -9,7 +9,7 @@ import subprocess
 
 # Assumes you have a custom module for listing files from MinIO
 from .minio_client import list_parquet_files
-from .test_spark import run_spark_chains, run_spark_blocks
+from .spark import run_spark_chains, run_spark_blocks
 
 
 logging.basicConfig(level=logging.INFO)
