@@ -9,37 +9,36 @@ TOPIC_NAME = 'chains_topic'
 
 # Mock data to be sent
 mock_data = {
-  "chains": [
-    {
-      "chainId": "test-chain-001",
-      "status": "OK",
-      "chainName": "TestChain Alpha",
-      "description": "A test chain for E2E validation",
-      "platformChainId": "platform-x",
-      "subnetId": "subnet-alpha",
-      "vmId": "vm-evm-01",
-      "vmName": "EVM",
-      "explorerUrl": "http://localhost/explorer/test-chain-001",
-      "rpcUrl": "http://localhost/rpc/test-chain-001",
-      "wsUrl": "ws://localhost/ws/test-chain-001",
-      "isTestnet": True,
-      "utilityAddresses": {
-        "multicall": "0x1234567890123456789012345678901234567890"
-      },
-      "networkToken": {
-        "name": "Wrapped AVAX",
-        "symbol": "WAVAX",
-        "decimals": 18,
-        "logoUri": "https://images.ctfassets.net/gcj8jwzm6086/5VHupNKwnDYJvqMENeV7iJ/fdd6326b7a82c8388e4ee9d4be7062d4/avalanche-avax-logo.svg",
-        "description": "The native token of the Avalanche platform, wrapped."
-      },
-      "chainLogoUri": "http://example.com/logo.png",
-      "private": True,
-      "enabledFeatures": [
-        "nftIndexing"
-      ]
+    "type": "chain.updated",
+    "chain": {
+        "chainId": "test-chain-001",
+        "chainName": "TestChain Alpha",
+        "status": "OK",
+        "description": "A test chain for E2E validation",
+        "platformChainId": "platform-x",
+        "subnetId": "subnet-alpha",
+        "vmId": "vm-evm-01",
+        "vmName": "EVM",
+        "explorerUrl": "http://localhost/explorer/test-chain-001",
+        "rpcUrl": "http://localhost/rpc/test-chain-001",
+        "wsUrl": "ws://localhost/ws/test-chain-001",
+        "isTestnet": True,
+        "utilityAddresses": {
+            "multicall": "0x1234567890123456789012345678901234567890"
+        },
+        "networkToken": {
+            "name": "Wrapped AVAX",
+            "symbol": "WAVAX",
+            "decimals": 18,
+            "logoUri": "https://images.ctfassets.net/gcj8jwzm6086/5VHupNKwnDYJvqMENeV7iJ/fdd6326b7a82c8388e4ee9d4be7062d4/avalanche-avax-logo.svg",
+            "description": "The native token of the Avalanche platform, wrapped."
+        },
+        "chainLogoUri": "http://example.com/logo.png",
+        "private": True,
+        "enabledFeatures": [
+            "nftIndexing"
+        ]
     }
-  ]
 }
 
 def send_message_to_kafka(producer, topic, data):
