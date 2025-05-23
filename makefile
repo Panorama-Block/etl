@@ -1,16 +1,24 @@
-.PHONY: up
+# Makefile
+
+# ### Configurações ###
+COMPOSE_FILE := infra/docker-compose.yml
+DC           := docker-compose -f $(COMPOSE_FILE)
+# ou, se você usa Docker Compose v2:
+# DC         := docker compose -f $(COMPOSE_FILE)
+
+# ### Alvos Phony ###
+.PHONY: all copy down up up-priv
+
+all: up
 
 copy:
 	cp .env.example .env
 
-copy-w:
-	copy .env.example .env
-	
-up: 
-	cd infra && docker-compose up --build --detach
+down:
+	$(DC) down
 
-down: 
-	cd infra && docker-compose down
+up:
+	$(DC) up --build --detach
 
 up-priv:
-	cd infra && sudo docker-compose up --build
+	sudo $(DC) up --build

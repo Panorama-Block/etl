@@ -46,7 +46,8 @@ def consume_kafka():
         if stop_event.is_set():
             break  # Sai do loop se o evento de parada for acionado
 
-        logger.debug(f"📩 Mensagem recebida: {message.value}")
+        logger.info(f"📩 Mensagem recebida: {message.value}")
+        logger.info(f"Tipo da mensagem: {type(message.value)}")
 
         messages_store.append(message.value)
 
@@ -57,9 +58,13 @@ def consume_kafka():
         try:
             # Cria um DataFrame com uma única linha contendo os dados da mensagem
             df = pd.DataFrame([message.value])
+            logger.info(f"DataFrame criado com colunas: {df.columns.tolist()}")
+            logger.info(f"Primeira linha do DataFrame: {df.iloc[0].to_dict()}")
+            
             buffer = io.BytesIO()
             df.to_parquet(buffer, index=False)
             buffer.seek(0)
+            
             # Agora, fazemos o upload da mensagem convertida para Parquet
             upload_data('data', file_name, buffer.getvalue())
             logger.info(f"📤 Mensagem salva no MinIO como Parquet: {file_name}")

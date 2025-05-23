@@ -7,32 +7,11 @@ import io
 import pandas as pd
 
 from .minio_client import upload_data
-from .config import KAFKA_BROKER, KAFKA_GROUP_ID
+from .config import KAFKA_BROKER, KAFKA_GROUP_ID, TOPICS
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
-
-# Map de tópicos para buckets
-TOPICS = {
-    "chains_topic": "chains",
-    "blocks_topic": "blocks",
-    "transactions_topic": "transactions",
-    "logs_topic": "logs",
-    "erc20_topic": "erc20",
-    "erc721_topic": "erc721",
-    "erc1155_topic": "erc1155",
-    "metrics_topic": "metrics",
-    "metrics_activity_topic": "metrics_activity",
-    "metrics_performance_topic": "metrics_performance",
-    "metrics_gas_topic": "metrics_gas",
-    "metrics_cumulative_topic": "metrics_cumulative",
-    "subnets_topic": "subnets",
-    "blockchains_topic": "blockchains",
-    "validators_topic": "validators",
-    "delegators_topic": "delegators",
-    "bridges_topic": "bridges"
-}
 
 # TOPICS = {
 #     "9cT3GzNxcLWFXGAgqdJsydZkh9ajKEXn4hKvkRLJHgwv.tokens":        "avax_tokens",
@@ -81,6 +60,8 @@ def consume_topic(topic_name, bucket_name, stop_event):
             if isinstance(data, str):
                 logger.debug(f"[{topic_name}] Mensagem recebida como string, convertendo para JSON.")
                 data = json.loads(message.value)
+            elif isinstance(data, dict):
+                logger.debug(f"Isntance: {type(data)}")
             else:
                 logger.debug(f"Isntance: {type(data)}")
                 
@@ -110,9 +91,9 @@ def consume_topic(topic_name, bucket_name, stop_event):
 
 def start_all_consumers():
     """Inicia uma thread de consumo para cada tópico"""
-    for topic, bucket in TOPICS.items():
+    for topic in TOPICS:
         stop_event = threading.Event()
-        thread = threading.Thread(target=consume_topic, args=(topic, bucket, stop_event), daemon=True)
+        thread = threading.Thread(target=consume_topic, args=(topic, topic, stop_event), daemon=True)
 
         stop_events[topic] = stop_event
         consumer_threads[topic] = thread
