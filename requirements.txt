@@ -1,0 +1,16 @@
+# runtime dependencies
+Flask==3.0.3
+requests==2.32.3
+pandas==2.2.3
+pyarrow==17.0.0
+minio==7.2.9
+clickhouse-connect==0.8.5
+python-dotenv==1.0.1
+kafka-python==2.0.3
+confluent-kafka==2.0.2
+six==1.16.0
+
+# dev dependencies
+pytest==7.4.0
+pytest-cov==4.1.0
+pytest-mock==3.11.1
