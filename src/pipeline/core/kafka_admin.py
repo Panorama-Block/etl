@@ -1,28 +1,9 @@
 from confluent_kafka.admin import AdminClient, NewTopic
-from .config import KAFKA_BROKER
+from .config import KAFKA_BROKER, TOPICS
+import logging
 
-print(f"KAFKA_BROKER: {KAFKA_BROKER}")
-
-# Map de tópicos para buckets
-TOPICS = {
-    "chains_topic": "chains",
-    "blocks_topic": "blocks",
-    "transactions_topic": "transactions",
-    "logs_topic": "logs",
-    "erc20_topic": "erc20",
-    "erc721_topic": "erc721",
-    "erc1155_topic": "erc1155",
-    "metrics_topic": "metrics",
-    "metrics_activity_topic": "metrics_activity",
-    "metrics_performance_topic": "metrics_performance",
-    "metrics_gas_topic": "metrics_gas",
-    "metrics_cumulative_topic": "metrics_cumulative",
-    "subnets_topic": "subnets",
-    "blockchains_topic": "blockchains",
-    "validators_topic": "validators",
-    "delegators_topic": "delegators",
-    "bridges_topic": "bridges",
-}
+logging.info(f"KAFKA_BROKER: {KAFKA_BROKER}")
+logging.info(f"TOPICS: {TOPICS}")
 
 # TOPICS = {
 #     "9cT3GzNxcLWFXGAgqdJsydZkh9ajKEXn4hKvkRLJHgwv.tokens":        "avax_tokens",
@@ -58,7 +39,7 @@ def create_all_topics():
     """Cria todos os tópicos definidos no mapa de tópicos"""
     topics = admin_client.list_topics(timeout=10).topics
 
-    for topic_name in TOPICS.keys():
+    for topic_name in TOPICS:
         if topic_name not in topics:
             new_topic = NewTopic(topic_name, num_partitions=1, replication_factor=1)
             admin_client.create_topics([new_topic])

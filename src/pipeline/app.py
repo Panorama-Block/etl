@@ -1,7 +1,7 @@
-from flask import Flask, request, jsonify
+import logging
+import sys
 import threading
 import atexit
-import threading
 
 from .core.minio_client import create_bucket, delete_all_buckets
 from .core.kafka_consumer import consume_kafka, start_kafka, stop_kafka
@@ -10,61 +10,40 @@ from .core.client_clickhouse import spark_clickhouse_run, get_chains_table, dele
 from .core.spark import run_spark_chains
 from .core.kafka_multi_consumer import start_all_consumers, stop_all_consumers
 
-app = Flask(__name__)
+# Configure root logger
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('app.log')
+    ]
+)
 
-# Create bucket if not exist
-create_bucket('data')
+# Create logger for this module
+logger = logging.getLogger(__name__)
 
 def stop_kafka_consumer():
-    print("🛑 Parando o Kafka Consumer...")
+    logger.info("🛑 Parando o Kafka Consumer...")
     stop_kafka()
-
 
 atexit.register(stop_kafka_consumer)
 atexit.register(stop_all_consumers)
 atexit.register(delete_all_buckets)
 atexit.register(delete_all_tables)
 
-@app.route('/chains', methods=['GET'])
-def get_chains():
-    chains = get_chains_table()
-    return jsonify(chains)
-
-@app.route('/delete-chains', methods=['DELETE'])
-def delete_tables():
-    delete_all_tables()
-    return jsonify({"message": "Tablea deleted successfully."})
-
-@app.route('/delete-buckets', methods=['DELETE'])
-def delete_buckets():
-    delete_all_buckets()
-    return jsonify({"message": "Buckets deleted successfully."})
-
-@app.route('/spark', methods=['GET'])
-def run_spark():
-    print("🚀 Executando o Spark Job...")
-    spark_version, avg_age = run_spark_chains()
-    return jsonify({"spark_version": spark_version, "avg_age": avg_age})
-
-@app.route('/health', methods=['GET'])
-def health():
-    return jsonify({"status": "ok"})
-
-@app.errorhandler(404)
-def not_found(error):
-    return jsonify({"error": "Endpoint not found"}), 404
+def main():
+    # Create bucket if not exist
+    create_bucket('data')
+    
+    # Create topics and start Kafka consumers first
+    logger.info("🚀 Iniciando Kafka consumers...")
+    create_all_topics()
+    start_all_consumers()
+    
+    # Start Spark processing
+    logger.info("🚀 Iniciando processamento Spark...")
+    spark_clickhouse_run()
 
 if __name__ == '__main__':
-    import logging
-    logging.basicConfig(level=logging.INFO)
-    # Start Kafka Consumer in a separate thread 
-    with app.app_context():
-        print("🚀 Iniciando o Kafka Consumer...")
-        create_all_topics()
-        start_all_consumers()
-
-        # run spark_clickhouse in a separate thread
-        # spark_thread = threading.Thread(target=spark_clickhouse_run)
-        # spark_thread.start()
-
-    app.run(host="0.0.0.0", port=5000)
+    main()
