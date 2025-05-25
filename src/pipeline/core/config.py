@@ -20,7 +20,7 @@ TOPICS = [
     "avalanche.erc20.43114",
     "avalanche.erc721.43114",
     "avalanche.erc1155.43114",
-    "avalanche.internal_tx.43114",
+    "avalanche.internal-tx.43114",
     "avax.metrics",
     "avax.metrics.activity",
     "avax.metrics.performance",

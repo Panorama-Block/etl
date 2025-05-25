@@ -4,21 +4,45 @@ from minio.error import S3Error
 import os
 from dotenv import load_dotenv
 from io import BytesIO
+import logging
+import sys
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('minio.log')
+    ]
+)
+
+logger = logging.getLogger(__name__)
+
+# Load environment variables
 load_dotenv()
 
-MINIO_URL = os.getenv("MINIO_URL")
-MINIO_USER = os.getenv("MINIO_USER")
-MINIO_PASSWORD = os.getenv("MINIO_PASSWORD")
+# Get MinIO configuration
+MINIO_URL = os.getenv("MINIO_URL", "http://minio:9000")
+MINIO_USER = os.getenv("MINIO_USER", "minioadmin")
+MINIO_PASSWORD = os.getenv("MINIO_PASSWORD", "minioadmin")
 
-print(f'MINIO_URL: {MINIO_URL}')
+logger.info(f'MinIO Configuration:')
+logger.info(f'MINIO_URL: {MINIO_URL}')
+logger.info(f'MINIO_USER: {MINIO_USER}')
+logger.info(f'MINIO_PASSWORD: {"*" * len(MINIO_PASSWORD) if MINIO_PASSWORD else "None"}')
 
-client = Minio(
-    MINIO_URL,
-    access_key=MINIO_USER,
-    secret_key=MINIO_PASSWORD,
-    secure=False
-)
+try:
+    client = Minio(
+        MINIO_URL.replace("http://", "").replace("https://", ""),  # Remove protocol
+        access_key=MINIO_USER,
+        secret_key=MINIO_PASSWORD,
+        secure=False
+    )
+    logger.info("MinIO client initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize MinIO client: {e}")
+    raise
 
 def create_bucket(bucket_name):
     """
@@ -27,38 +51,58 @@ def create_bucket(bucket_name):
     try:
         if not client.bucket_exists(bucket_name):
             client.make_bucket(bucket_name)
-            print(f"Bucket '{bucket_name}' created successfully.")
+            logger.info(f"Bucket '{bucket_name}' created successfully.")
         else:
-            print(f"Bucket '{bucket_name}' already exists.")
+            logger.info(f"Bucket '{bucket_name}' already exists.")
     except S3Error as e:
-        print(f"Error interacting with MinIO: {e}")
+        logger.error(f"Error interacting with MinIO: {e}")
+        raise
 
 def delete_all_buckets():
     """
-    Delete all buckets in Minio.
+    Delete all buckets in MinIO.
     """
     try:
-        for bucket in client.list_buckets():
-            client.remove_bucket(bucket.name)
-            print(f"Bucket '{bucket.name}' deleted successfully.")
+        buckets = client.list_buckets()
+        for bucket in buckets:
+            try:
+                # List all objects in the bucket
+                objects = client.list_objects(bucket.name, recursive=True)
+                # Delete all objects
+                for obj in objects:
+                    client.remove_object(bucket.name, obj.object_name)
+                # Delete the bucket
+                client.remove_bucket(bucket.name)
+                logger.info(f"Bucket '{bucket.name}' deleted successfully.")
+            except S3Error as e:
+                logger.error(f"Error deleting bucket '{bucket.name}': {e}")
     except S3Error as e:
-        print(f"Error deleting buckets in MinIO: {e}")
+        logger.error(f"Error listing buckets: {e}")
+        raise
 
-def upload_data(bucket_name, file_name, data):
+def upload_data(bucket_name, object_name, data):
     """
-    Upload data to Minio as an object in the specified bucket.
+    Upload data to MinIO.
     """
     try:
-        # Create the bucket if it doesn't exist
-        create_bucket(bucket_name)
-
-        # Upload the data to Minio (as an object)
-        data_bytes = BytesIO(data)  # Convert string data to bytes
-        res = client.put_object(bucket_name, file_name, data_bytes, len(data_bytes.getvalue()))
-        print(f"Data uploaded successfully with name: {file_name}")
-        return res
+        if not client.bucket_exists(bucket_name):
+            create_bucket(bucket_name)
+        
+        # Convert data to bytes if it's not already
+        if not isinstance(data, bytes):
+            data = data.encode('utf-8')
+        
+        # Upload the data
+        client.put_object(
+            bucket_name,
+            object_name,
+            BytesIO(data),
+            length=len(data)
+        )
+        logger.info(f"Data uploaded successfully to '{bucket_name}/{object_name}'")
     except S3Error as e:
-        print(f"Error uploading data to MinIO: {e}")    
+        logger.error(f"Error uploading data to MinIO: {e}")
+        raise
 
 def list_parquet_files(bucket, prefix=""):
     """
